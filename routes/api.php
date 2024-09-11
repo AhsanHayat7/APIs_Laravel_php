@@ -42,19 +42,30 @@ use Illuminate\Support\Facades\Route;
 
 //
 
-Route::get('/test', function() {
+Route::get('/test', function () {
     p("Working");
 });
 
 
 
-Route::post('users/store','App\Http\Controllers\Api\UserController@store');
+Route::post('users/store', [Usercontroller::class, 'store']);
 
-Route::get('users/get/{flag}',[UserController::class, 'index']);
+Route::get('users/get/{flag}', [UserController::class, 'index']);
 Route::get('user/{id}',  [UserController::class, 'show']);
-Route::delete('user/delete/{id}',[UserController::class, 'destroy']);
+Route::delete('user/delete/{id}', [UserController::class, 'destroy']);
 
 
 Route::get('users/{id?}', [UserController::class, 'get']);
-Route::put('update/{id}',[UserController::class, 'update']);
-Route::patch('change-password',[UserController::class, 'changedpassword']);
+Route::put('users/update/{id}', [UserController::class, 'update']);
+Route::patch('changed-password/{id}', [UserController::class, 'changedpassword']);
+
+
+// login auth apis
+Route::post('/register', [UserController::class,  'register']);
+Route::post('/login', [UserController::class, 'login']);
+
+Route::middleware('auth:api')->group(function () {
+
+
+    Route::get('/user/{id}', [UserController::class,  'getUser']);
+});

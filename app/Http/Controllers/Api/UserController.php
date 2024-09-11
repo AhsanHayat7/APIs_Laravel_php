@@ -89,7 +89,8 @@ class UserController extends Controller
             $data = [
                 'name' => $request->name,
                 'email' => $request->email,
-                'password' => Hash::make($request->password),
+                // 'password' => Hash::make($request->password),
+                'password'=> $request->password,
             ];
             // p($data);
             DB::beginTransaction();
@@ -99,6 +100,7 @@ class UserController extends Controller
             }
             catch(\Exception $e){
                 DB::rollBack();
+                // p($e->getMessage());
                 $user = null ;
             }
             if($user != null){
@@ -285,39 +287,138 @@ class UserController extends Controller
     }
 
 
-    public function changepassword(Request $request,$id){
+
+
+    public function changedpassword(Request $request, $id){
 
         $user = User::find($id);
-       if(is_null($user)){
-            return response()->json([
-                'message'=> "User doesn't exits found",
-                'status'=> 0,
-            ], 404);
+        if(is_null($user)){
+
+            return response()->json(
+                [
+                    'status'=> 0,
+                    'message'=> "User Doesnt Exist",
+
+                ], 404
+            );
         }
         else{
             if($user->password == $request->old_password){
-
-                if($user->new_password == $request->confirm_password){
+                //change
+                if($request->new_password == $request->confirm_password){
                     DB::beginTransaction();
-                         try{
+                    try{
+                        $user->password = $request->new_password;
+                        $user->save();
+                        DB::commit();
+
+                    }catch(\Exception $e){
+                        $user =null;
+                        DB::rollBack();
+                    }
+                    if(is_null($user)){
+
+                        return response()->json(
+                        $response = [
+                             "message" => "Internal Server Error",
+                            "status"=>  0,
+                            "error_msg"=> $e->getMessage()
+                        ],
+                        500);
+                     }
+                     else{
+                        return response()->json(
+                            $response = [
+                                 "message" => "Password Updated Successfully",
+                                "status"=>  1,
+                            ],
+                            200);
+
+                     }
                 }else{
-                    return response()->json([
-                        'status' => 0,
-                        'message'=> "new password and confirm password doesn't match",
-                    ], 400);
+                    return response()->json(
+                        [
+                            'status'=> 0,
+                            'message'=> "New password and Confirm password doesn't match",
+
+                        ], 400
+                    );
                 }
+            }else{
+                return response()->json(
+                    [
+                        'status'=> 0,
+                        'message'=> "Old Password Doesn't Match",
 
-
-    }else{
-        return response()->json([
-            'status' => 0,
-            'message'=> "old password  doesn't correct",
-        ], 400);
-
-    }
+                    ], 400
+                );
 
             }
         }
     }
-}
 
+
+    public function register(Request $request){
+        $validatordata = $request->validate([
+            'name'=> 'required',
+            'email'=> 'required|email',
+            'password'=> 'min:8|confirmed'
+        ]);
+
+        $user = User::create($validatordata);
+        $token = $user->createToken('auth_token')->accessToken;
+
+            return response()->json([
+                'token'=> $token,
+                'user'=> $user,
+                'message'=> "User created  Successfully.",
+                'status'=> 1,
+
+
+            ], );
+    }
+
+
+
+
+    public function login(Request $request){
+        $validatordata = $request->validate([
+            'email'=> 'required|email',
+            'password'=> 'required'
+        ]);
+        $user = User::where(['email'=> $validatordata['email'] ,'password'=> $validatordata['password']])->first();
+        $token = $user->createToken('auth_token')->accessToken;
+        return response()->json([
+            'token'=> $token,
+            'user'=> $user,
+            'message'=> "User Logged in  Successfully.",
+            'status'=> 1,
+
+
+        ], );
+
+    }
+
+    public function getUser($id){
+        $user  =  User::find($id);
+        if(is_null($user)){
+            return response()->json([
+                'user'=> null,
+                'message'=> "No User Found",
+                'status'=> 0,
+
+
+            ], );
+        }else{
+            return response()->json([
+                'message'=> "User Found Successfully.",
+                'status'=> 1,
+                'user' => $user,
+
+
+            ], );
+
+        }
+    }
+
+}
